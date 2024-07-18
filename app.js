@@ -1,10 +1,4 @@
 // Firebase konfigurace
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDYu55EbUa20RR2OdECkTy6_85Xw8L3Krg",
   authDomain: "photo-voting-app-8d063.firebaseapp.com",
@@ -15,11 +9,22 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
-
-// Inicializace Firebase
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
+
+// Definice testových fotek
+const testPhotos = [
+  { id: 1, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-app@main/foto1.jpg' },
+  { id: 2, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-app@main/foto2.jpg' },
+  { id: 3, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-app@main/foto3.jpg' },
+  { id: 4, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-app@main/foto4.jpg' },
+  { id: 5, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-app@main/foto5.jpg' },
+  { id: 6, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-app@main/foto6.jpg' },
+  { id: 7, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-app@main/foto7.jpg' },
+  { id: 8, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-app@main/foto8.jpg' },
+  { id: 9, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-app@main/foto9.jpg' },
+  { id: 10, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-app@main/foto10.jpg' },
+];
 
 const PhotoVotingApp = () => {
   const [photos, setPhotos] = React.useState([]);
