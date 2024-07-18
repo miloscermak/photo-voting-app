@@ -14,16 +14,16 @@ const database = firebase.database();
 
 // Definice testových fotek
 const testPhotos = [
-  { id: 1, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-app@main/foto1.jpg' },
-  { id: 2, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-app@main/foto2.jpg' },
-  { id: 3, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-app@main/foto3.jpg' },
-  { id: 4, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-app@main/foto4.jpg' },
-  { id: 5, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-app@main/foto5.jpg' },
-  { id: 6, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-app@main/foto6.jpg' },
-  { id: 7, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-app@main/foto7.jpg' },
-  { id: 8, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-app@main/foto8.jpg' },
-  { id: 9, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-app@main/foto9.jpg' },
-  { id: 10, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-app@main/foto10.jpg' },
+  { id: 1, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-test-images@main/foto1.png' },
+  { id: 2, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-test-images@main/foto2.png' },
+  { id: 3, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-test-images@main/foto3.png' },
+  { id: 4, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-test-images@main/foto4.png' },
+  { id: 5, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-test-images@main/foto5.png' },
+  { id: 6, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-test-images@main/foto6.png' },
+  { id: 7, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-test-images@main/foto7.png' },
+  { id: 8, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-test-images@main/foto8.png' },
+  { id: 9, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-test-images@main/foto9.png' },
+  { id: 10, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-test-images@main/foto10.png' },
 ];
 
 const PhotoVotingApp = () => {
