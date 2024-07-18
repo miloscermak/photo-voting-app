@@ -1,27 +1,50 @@
-console.log("App.js se načetl");
+// Firebase konfigurace
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
-const testPhotos = [
-  { id: 1, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-test-images@main/foto1.png' },
-  { id: 2, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-test-images@main/foto2.png' },
-  { id: 3, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-test-images@main/foto3.png' },
-  { id: 4, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-test-images@main/foto4.png' },
-  { id: 5, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-test-images@main/foto5.png' },
-  { id: 6, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-test-images@main/foto6.png' },
-  { id: 7, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-test-images@main/foto7.png' },
-  { id: 8, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-test-images@main/foto8.png' },
-  { id: 9, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-test-images@main/foto9.png' },
-  { id: 10, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-test-images@main/foto10.png' },
-];
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyDYu55EbUa20RR2OdECkTy6_85Xw8L3Krg",
+  authDomain: "photo-voting-app-8d063.firebaseapp.com",
+  projectId: "photo-voting-app-8d063",
+  storageBucket: "photo-voting-app-8d063.appspot.com",
+  messagingSenderId: "942848998122",
+  appId: "1:942848998122:web:bae5f4522763fd8a437593"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+
+// Inicializace Firebase
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
 
 const PhotoVotingApp = () => {
   const [photos, setPhotos] = React.useState([]);
   const [currentPair, setCurrentPair] = React.useState([]);
   const [rankings, setRankings] = React.useState([]);
+  const [isAdmin, setIsAdmin] = React.useState(false);
 
   React.useEffect(() => {
-    setPhotos(testPhotos);
-    selectRandomPair(testPhotos);
+    const storedPhotos = JSON.parse(localStorage.getItem('photos')) || testPhotos;
+    setPhotos(storedPhotos);
+    selectRandomPair(storedPhotos);
+    loadVotesFromFirebase();
   }, []);
+
+  const loadVotesFromFirebase = () => {
+    database.ref('votes').once('value', (snapshot) => {
+      const votesData = snapshot.val() || {};
+      const updatedPhotos = photos.map(photo => ({
+        ...photo,
+        votes: votesData[photo.id] || 0
+      }));
+      setPhotos(updatedPhotos);
+      updateRankings(updatedPhotos);
+    });
+  };
 
   const selectRandomPair = (photoList) => {
     const shuffled = [...photoList].sort(() => 0.5 - Math.random());
@@ -35,11 +58,37 @@ const PhotoVotingApp = () => {
     setPhotos(updatedPhotos);
     updateRankings(updatedPhotos);
     selectRandomPair(updatedPhotos);
+    saveVotesToFirebase(votedPhotoId);
+  };
+
+  const saveVotesToFirebase = (votedPhotoId) => {
+    database.ref(`votes/${votedPhotoId}`).transaction((currentVotes) => {
+      return (currentVotes || 0) + 1;
+    });
   };
 
   const updateRankings = (updatedPhotos) => {
     const sortedPhotos = [...updatedPhotos].sort((a, b) => (b.votes || 0) - (a.votes || 0));
     setRankings(sortedPhotos);
+    localStorage.setItem('photos', JSON.stringify(sortedPhotos));
+  };
+
+  const handleReset = () => {
+    if (window.confirm('Opravdu chcete resetovat všechny hlasy?')) {
+      const resetPhotos = photos.map(photo => ({ ...photo, votes: 0 }));
+      setPhotos(resetPhotos);
+      updateRankings(resetPhotos);
+      database.ref('votes').set({});
+    }
+  };
+
+  const toggleAdmin = () => {
+    const password = prompt('Zadejte heslo pro přístup k admin funkcím:');
+    if (password === 'berenika') {  // Nahraďte skutečným heslem
+      setIsAdmin(!isAdmin);
+    } else {
+      alert('Nesprávné heslo');
+    }
   };
 
   return (
@@ -64,6 +113,14 @@ const PhotoVotingApp = () => {
           </li>
         ))}
       </ol>
+      <button onClick={toggleAdmin} style={{marginTop: '20px'}}>
+        {isAdmin ? 'Skrýt admin funkce' : 'Zobrazit admin funkce'}
+      </button>
+      {isAdmin && (
+        <button onClick={handleReset} style={{marginLeft: '10px', backgroundColor: 'red', color: 'white'}}>
+          Resetovat hlasy
+        </button>
+      )}
     </div>
   );
 };
