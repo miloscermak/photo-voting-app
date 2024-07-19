@@ -11,6 +11,7 @@ const firebaseConfig = {
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
+const auth = firebase.auth();
 
 // Definice testových fotek
 const testPhotos = [
@@ -26,49 +27,93 @@ const testPhotos = [
   { id: 10, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-test-images@main/foto10.png' },
 ];
 
+// Komponenta pro zobrazení jednotlivé fotky
+const Photo = React.memo(({ photo, onVote }) => {
+  return (
+    <div style={{textAlign: 'center'}}>
+      <img 
+        src={photo.url} 
+        alt={`Foto ${photo.id}`} 
+        style={{width: '300px', height: '200px', objectFit: 'cover'}} 
+        onError={(e) => console.error(`Error loading image ${photo.id}:`, e)}
+      />
+      <br />
+      <button onClick={() => onVote(photo.id)} style={{marginTop: '10px', padding: '5px 10px'}}>
+        Hlasovat
+      </button>
+    </div>
+  );
+});
+
+// Hlavní komponenta aplikace
 const PhotoVotingApp = () => {
   const [photos, setPhotos] = React.useState([]);
   const [currentPair, setCurrentPair] = React.useState([]);
   const [rankings, setRankings] = React.useState([]);
   const [isAdmin, setIsAdmin] = React.useState(false);
+  const [user, setUser] = React.useState(null);
 
   React.useEffect(() => {
     const storedPhotos = JSON.parse(localStorage.getItem('photos')) || testPhotos;
     setPhotos(storedPhotos);
     selectRandomPair(storedPhotos);
     loadVotesFromFirebase();
+
+    // Nastavení posluchače pro změny stavu autentizace
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        setUser(user);
+        setIsAdmin(true);
+      } else {
+        setUser(null);
+        setIsAdmin(false);
+      }
+    });
+
+    // Cleanup při odmontování komponenty
+    return () => unsubscribe();
   }, []);
 
   const loadVotesFromFirebase = () => {
-    database.ref('votes').once('value', (snapshot) => {
-      const votesData = snapshot.val() || {};
-      const updatedPhotos = photos.map(photo => ({
-        ...photo,
-        votes: votesData[photo.id] || 0
-      }));
-      setPhotos(updatedPhotos);
-      updateRankings(updatedPhotos);
-    });
+    database.ref('votes').once('value')
+      .then((snapshot) => {
+        const votesData = snapshot.val() || {};
+        const updatedPhotos = photos.map(photo => ({
+          ...photo,
+          votes: votesData[photo.id] || 0
+        }));
+        setPhotos(updatedPhotos);
+        updateRankings(updatedPhotos);
+      })
+      .catch((error) => {
+        console.error("Chyba při načítání hlasů:", error);
+        alert("Nastala chyba při načítání hlasů. Zkuste to prosím později.");
+      });
   };
 
-  const selectRandomPair = (photoList) => {
+  const selectRandomPair = React.useCallback((photoList) => {
     const shuffled = [...photoList].sort(() => 0.5 - Math.random());
     setCurrentPair(shuffled.slice(0, 2));
-  };
+  }, []);
 
-  const handleVote = (votedPhotoId) => {
-    const updatedPhotos = photos.map(photo => 
-      photo.id === votedPhotoId ? { ...photo, votes: (photo.votes || 0) + 1 } : photo
-    );
-    setPhotos(updatedPhotos);
-    updateRankings(updatedPhotos);
-    selectRandomPair(updatedPhotos);
-    saveVotesToFirebase(votedPhotoId);
-  };
+  const handleVote = React.useCallback((votedPhotoId) => {
+    setPhotos(prevPhotos => {
+      const updatedPhotos = prevPhotos.map(photo => 
+        photo.id === votedPhotoId ? { ...photo, votes: (photo.votes || 0) + 1 } : photo
+      );
+      updateRankings(updatedPhotos);
+      selectRandomPair(updatedPhotos);
+      saveVotesToFirebase(votedPhotoId);
+      return updatedPhotos;
+    });
+  }, [selectRandomPair]);
 
   const saveVotesToFirebase = (votedPhotoId) => {
     database.ref(`votes/${votedPhotoId}`).transaction((currentVotes) => {
       return (currentVotes || 0) + 1;
+    }).catch((error) => {
+      console.error("Chyba při ukládání hlasu:", error);
+      alert("Nastala chyba při ukládání hlasu. Zkuste to prosím znovu.");
     });
   };
 
@@ -83,41 +128,38 @@ const PhotoVotingApp = () => {
       const resetPhotos = photos.map(photo => ({ ...photo, votes: 0 }));
       setPhotos(resetPhotos);
       updateRankings(resetPhotos);
-      database.ref('votes').set({});
+      database.ref('votes').set({})
+        .catch((error) => {
+          console.error("Chyba při resetování hlasů:", error);
+          alert("Nastala chyba při resetování hlasů. Zkuste to prosím znovu.");
+        });
     }
   };
 
-  const toggleAdmin = () => {
-    const password = prompt('Zadejte heslo pro přístup k admin funkcím:');
-    if (password === 'berenika') {  // Nahraďte skutečným heslem
-      setIsAdmin(!isAdmin);
-    } else {
-      alert('Nesprávné heslo');
-    }
+  const handleLogin = () => {
+    const email = prompt("Zadejte e-mail:");
+    const password = prompt("Zadejte heslo:");
+
+    auth.signInWithEmailAndPassword(email, password)
+      .catch((error) => {
+        console.error("Chyba při přihlašování:", error);
+        alert("Nesprávné přihlašovací údaje");
+      });
   };
 
-  // Debug logs
-  console.log("Current pair:", currentPair);
-  console.log("All photos:", photos);
+  const handleLogout = () => {
+    auth.signOut()
+      .catch((error) => {
+        console.error("Chyba při odhlašování:", error);
+      });
+  };
 
   return (
     <div style={{fontFamily: 'Arial, sans-serif', maxWidth: '800px', margin: '0 auto', padding: '20px'}}>
       <h1 style={{textAlign: 'center'}}>Hlasování o fotkách</h1>
       <div style={{display: 'flex', justifyContent: 'space-around', marginBottom: '20px'}}>
         {currentPair.map(photo => (
-          <div key={photo.id} style={{textAlign: 'center'}}>
-            <p>Debug: Photo ID: {photo.id}, URL: {photo.url}</p>
-            <img 
-              src={photo.url} 
-              alt={`Foto ${photo.id}`} 
-              style={{width: '300px', height: '200px', objectFit: 'cover'}} 
-              onError={(e) => console.error(`Error loading image ${photo.id}:`, e)}
-            />
-            <br />
-            <button onClick={() => handleVote(photo.id)} style={{marginTop: '10px', padding: '5px 10px'}}>
-              Hlasovat
-            </button>
-          </div>
+          <Photo key={photo.id} photo={photo} onVote={handleVote} />
         ))}
       </div>
       <h2 style={{textAlign: 'center'}}>Aktuální žebříček</h2>
@@ -128,16 +170,51 @@ const PhotoVotingApp = () => {
           </li>
         ))}
       </ol>
-      <button onClick={toggleAdmin} style={{marginTop: '20px'}}>
-        {isAdmin ? 'Skrýt admin funkce' : 'Zobrazit admin funkce'}
-      </button>
-      {isAdmin && (
-        <button onClick={handleReset} style={{marginLeft: '10px', backgroundColor: 'red', color: 'white'}}>
-          Resetovat hlasy
-        </button>
+      {user ? (
+        <>
+          <button onClick={handleLogout} style={{marginTop: '20px'}}>Odhlásit se</button>
+          {isAdmin && (
+            <button onClick={handleReset} style={{marginLeft: '10px', backgroundColor: 'red', color: 'white'}}>
+              Resetovat hlasy
+            </button>
+          )}
+        </>
+      ) : (
+        <button onClick={handleLogin} style={{marginTop: '20px'}}>Přihlásit se jako admin</button>
       )}
     </div>
   );
 };
+
+// Funkce pro testování dostupnosti obrázků
+function testImageAvailability() {
+  const imageUrls = testPhotos.map(photo => photo.url);
+  
+  imageUrls.forEach((url, index) => {
+    const img = new Image();
+    img.onload = () => console.log(`Image ${index + 1} loaded successfully`);
+    img.onerror = () => console.error(`Error loading image ${index + 1}: ${url}`);
+    img.src = url;
+  });
+}
+
+// Funkce pro testování selectRandomPair
+function testSelectRandomPair() {
+  const testPhotos = [
+    { id: 1, url: 'url1' },
+    { id: 2, url: 'url2' },
+    { id: 3, url: 'url3' },
+    { id: 4, url: 'url4' }
+  ];
+
+  const result = selectRandomPair(testPhotos);
+
+  console.assert(result.length === 2, 'Výsledek by měl obsahovat dva prvky');
+  console.assert(result[0].id !== result[1].id, 'Vybrané fotky by měly být různé');
+  console.assert(testPhotos.some(p => p.id === result[0].id), 'První fotka by měla být z původního seznamu');
+  console.assert(testPhotos.some(p => p.id === result[1].id), 'Druhá fotka by měla být z původního seznamu');
+
+  console.log('Test selectRandomPair proběhl úspěšně');
+}
 
 ReactDOM.render(<PhotoVotingApp />, document.getElementById('app'));
