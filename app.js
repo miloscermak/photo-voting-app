@@ -96,13 +96,23 @@ const PhotoVotingApp = () => {
     }
   };
 
+  // Debug logs
+  console.log("Current pair:", currentPair);
+  console.log("All photos:", photos);
+
   return (
     <div style={{fontFamily: 'Arial, sans-serif', maxWidth: '800px', margin: '0 auto', padding: '20px'}}>
       <h1 style={{textAlign: 'center'}}>Hlasování o fotkách</h1>
       <div style={{display: 'flex', justifyContent: 'space-around', marginBottom: '20px'}}>
         {currentPair.map(photo => (
           <div key={photo.id} style={{textAlign: 'center'}}>
-            <img src={photo.url} alt={`Foto ${photo.id}`} style={{width: '300px', height: '200px', objectFit: 'cover'}} />
+            <p>Debug: Photo ID: {photo.id}, URL: {photo.url}</p>
+            <img 
+              src={photo.url} 
+              alt={`Foto ${photo.id}`} 
+              style={{width: '300px', height: '200px', objectFit: 'cover'}} 
+              onError={(e) => console.error(`Error loading image ${photo.id}:`, e)}
+            />
             <br />
             <button onClick={() => handleVote(photo.id)} style={{marginTop: '10px', padding: '5px 10px'}}>
               Hlasovat
