@@ -18,6 +18,17 @@ if (!firebase.apps.length) {
 const database = firebase.database();
 const auth = firebase.auth();
 
+console.log("Firebase inicializován:", firebase.apps.length > 0);
+
+// Kontrola připojení k Firebase
+firebase.database().ref('.info/connected').on('value', function(snapshot) {
+  if (snapshot.val() === true) {
+    console.log("Připojeno k Firebase");
+  } else {
+    console.log("Odpojeno od Firebase");
+  }
+});
+
 // Definice testových fotek
 const testPhotos = [
   { id: 1, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-test-images@main/foto1.png' },
@@ -31,6 +42,7 @@ const testPhotos = [
   { id: 9, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-test-images@main/foto9.png' },
   { id: 10, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-test-images@main/foto10.png' },
 ];
+
 // Komponenta pro zobrazení jednotlivé fotky
 const Photo = React.memo(({ photo, onVote }) => {
   return (
@@ -58,7 +70,9 @@ const PhotoVotingApp = () => {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
+    console.log("useEffect se spustil");
     const storedPhotos = JSON.parse(localStorage.getItem('photos')) || testPhotos;
+    console.log("Načtené fotky:", storedPhotos);
     setPhotos(storedPhotos);
     setCurrentPair(selectRandomPair(storedPhotos));
     loadVotesFromFirebase();
@@ -67,9 +81,11 @@ const PhotoVotingApp = () => {
       if (user) {
         setUser(user);
         setIsAdmin(true);
+        console.log("Uživatel přihlášen:", user.email);
       } else {
         setUser(null);
         setIsAdmin(false);
+        console.log("Uživatel odhlášen");
       }
     });
 
@@ -77,9 +93,11 @@ const PhotoVotingApp = () => {
   }, []);
 
   const loadVotesFromFirebase = () => {
+    console.log("Začátek načítání hlasů z Firebase");
     database.ref('votes').once('value')
       .then((snapshot) => {
         const votesData = snapshot.val() || {};
+        console.log("Načtená data z Firebase:", votesData);
         const updatedPhotos = photos.map(photo => ({
           ...photo,
           votes: votesData[photo.id] || 0
@@ -111,6 +129,7 @@ const PhotoVotingApp = () => {
   }, [selectRandomPair]);
 
   const saveVotesToFirebase = (votedPhotoId) => {
+    console.log("Ukládání hlasu do Firebase:", votedPhotoId);
     database.ref(`votes/${votedPhotoId}`).transaction((currentVotes) => {
       return (currentVotes || 0) + 1;
     }).catch((error) => {
@@ -123,6 +142,7 @@ const PhotoVotingApp = () => {
     const sortedPhotos = [...updatedPhotos].sort((a, b) => (b.votes || 0) - (a.votes || 0));
     setRankings(sortedPhotos);
     localStorage.setItem('photos', JSON.stringify(sortedPhotos));
+    console.log("Aktualizovaný žebříček:", sortedPhotos);
   };
 
   const handleReset = () => {
@@ -155,6 +175,9 @@ const PhotoVotingApp = () => {
         console.error("Chyba při odhlašování:", error);
       });
   };
+
+  console.log("Current pair:", currentPair);
+  console.log("Rankings:", rankings);
 
   return (
     <div style={{fontFamily: 'Arial, sans-serif', maxWidth: '800px', margin: '0 auto', padding: '20px'}}>
