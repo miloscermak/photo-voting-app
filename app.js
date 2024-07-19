@@ -1,3 +1,6 @@
+// Použití globálních proměnných místo importů
+const { useState, useEffect, useCallback } = React;
+
 // Firebase konfigurace
 const firebaseConfig = {
   apiKey: "AIzaSyDYu55EbUa20RR2OdECkTy6_85Xw8L3Krg",
@@ -8,8 +11,10 @@ const firebaseConfig = {
   appId: "1:942848998122:web:bae5f4522763fd8a437593"
 };
 
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
+// Inicializace Firebase
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
 const database = firebase.database();
 const auth = firebase.auth();
 
@@ -26,7 +31,6 @@ const testPhotos = [
   { id: 9, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-test-images@main/foto9.png' },
   { id: 10, url: 'https://cdn.jsdelivr.net/gh/miloscermak/photo-voting-test-images@main/foto10.png' },
 ];
-
 // Komponenta pro zobrazení jednotlivé fotky
 const Photo = React.memo(({ photo, onVote }) => {
   return (
@@ -47,19 +51,18 @@ const Photo = React.memo(({ photo, onVote }) => {
 
 // Hlavní komponenta aplikace
 const PhotoVotingApp = () => {
-  const [photos, setPhotos] = React.useState([]);
-  const [currentPair, setCurrentPair] = React.useState([]);
-  const [rankings, setRankings] = React.useState([]);
-  const [isAdmin, setIsAdmin] = React.useState(false);
-  const [user, setUser] = React.useState(null);
+  const [photos, setPhotos] = useState([]);
+  const [currentPair, setCurrentPair] = useState([]);
+  const [rankings, setRankings] = useState([]);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [user, setUser] = useState(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const storedPhotos = JSON.parse(localStorage.getItem('photos')) || testPhotos;
     setPhotos(storedPhotos);
-    selectRandomPair(storedPhotos);
+    setCurrentPair(selectRandomPair(storedPhotos));
     loadVotesFromFirebase();
 
-    // Nastavení posluchače pro změny stavu autentizace
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
         setUser(user);
@@ -70,7 +73,6 @@ const PhotoVotingApp = () => {
       }
     });
 
-    // Cleanup při odmontování komponenty
     return () => unsubscribe();
   }, []);
 
@@ -91,18 +93,18 @@ const PhotoVotingApp = () => {
       });
   };
 
-  const selectRandomPair = React.useCallback((photoList) => {
+  const selectRandomPair = useCallback((photoList) => {
     const shuffled = [...photoList].sort(() => 0.5 - Math.random());
-    setCurrentPair(shuffled.slice(0, 2));
+    return shuffled.slice(0, 2);
   }, []);
 
-  const handleVote = React.useCallback((votedPhotoId) => {
+  const handleVote = useCallback((votedPhotoId) => {
     setPhotos(prevPhotos => {
       const updatedPhotos = prevPhotos.map(photo => 
         photo.id === votedPhotoId ? { ...photo, votes: (photo.votes || 0) + 1 } : photo
       );
       updateRankings(updatedPhotos);
-      selectRandomPair(updatedPhotos);
+      setCurrentPair(selectRandomPair(updatedPhotos));
       saveVotesToFirebase(votedPhotoId);
       return updatedPhotos;
     });
@@ -185,36 +187,5 @@ const PhotoVotingApp = () => {
     </div>
   );
 };
-
-// Funkce pro testování dostupnosti obrázků
-function testImageAvailability() {
-  const imageUrls = testPhotos.map(photo => photo.url);
-  
-  imageUrls.forEach((url, index) => {
-    const img = new Image();
-    img.onload = () => console.log(`Image ${index + 1} loaded successfully`);
-    img.onerror = () => console.error(`Error loading image ${index + 1}: ${url}`);
-    img.src = url;
-  });
-}
-
-// Funkce pro testování selectRandomPair
-function testSelectRandomPair() {
-  const testPhotos = [
-    { id: 1, url: 'url1' },
-    { id: 2, url: 'url2' },
-    { id: 3, url: 'url3' },
-    { id: 4, url: 'url4' }
-  ];
-
-  const result = selectRandomPair(testPhotos);
-
-  console.assert(result.length === 2, 'Výsledek by měl obsahovat dva prvky');
-  console.assert(result[0].id !== result[1].id, 'Vybrané fotky by měly být různé');
-  console.assert(testPhotos.some(p => p.id === result[0].id), 'První fotka by měla být z původního seznamu');
-  console.assert(testPhotos.some(p => p.id === result[1].id), 'Druhá fotka by měla být z původního seznamu');
-
-  console.log('Test selectRandomPair proběhl úspěšně');
-}
 
 ReactDOM.render(<PhotoVotingApp />, document.getElementById('app'));
